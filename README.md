@@ -5,11 +5,11 @@ The knowledge graph represents a collection of news articles with associated met
 The primary objective is to assess the objectivity of textual information, allowing users to ask questions about text objectivity, retrieve relevant information, and perform advanced analyses.
 
 ## Table of Contents
- [Overview](#overview)
- [Dataset](#dataset)
- [Setup](#setup)
- [Graph Structure](#graph-structure)
- [License](#license)
+-  [Overview](#overview)
+-  [Dataset](#dataset)
+-  [Setup](#setup)
+-  [Graph Structure](#graph-structure)
+-  [License](#license)
 
 ## Overview
 
@@ -45,48 +45,48 @@ In the Neo4j browser, run the Cypher queries to import data from the CSV file.
 The knowledge graph is designed using Neo4j's property graph model, representing entities as nodes and relationships as edges. Key entities and relationships are identified based on our domain requirements. Properties and data types associated with each node and relationship type in the knowledge graph are defined as the following: 
 
 Article:
-Rationale: Represents the core unit of content, including its title, text, and various analytical scores. Essential for understanding the substance of the information.
-Properties: Title, Text, Publication Date, Content Quality Score
-Relationships: Written by (Author), Published by (Publisher), Belongs to (Topic), Tagged as (Tag), Mentions (Named Entity), Published in (Country), Analyzed for Content Quality (Content Quality Score).
+- Rationale: Represents the core unit of content, including its title, text, and various analytical scores. Essential for understanding the substance of the information.
+- Properties: Title, Text, Publication Date, Content Quality Score
+- Relationships: Written by (Author), Published by (Publisher), Belongs to (Topic), Tagged as (Tag), Mentions (Named Entity), Published in (Country), Analyzed for Content Quality (Content Quality Score).
 
 Author:
-Rationale: Central to assessing content reliability and potential biases. Understanding an author's background and reputation contributes to evaluating the credibility of the content.
-Properties: Name, Reliability Score, Bias Score.
-Relationships: Writes (Articles).
+- Rationale: Central to assessing content reliability and potential biases. Understanding an author's background and reputation contributes to evaluating the credibility of the content.
+- Properties: Name, Reliability Score, Bias Score.
+- Relationships: Writes (Articles).
 
 Publisher:
-Rationale: Publishers play a significant role in shaping editorial policies and content perspectives. Examining the publisher helps discern potential institutional biases.
-Properties: Name, Reliability Score.
-Relationships: Publishes (Articles).
+- Rationale: Publishers play a significant role in shaping editorial policies and content perspectives. Examining the publisher helps discern potential institutional biases.
+- Properties: Name, Reliability Score.
+- Relationships: Publishes (Articles).
 
 Topic:
-Rationale: Identifies the central theme or subject matter of the content. Crucial for understanding the context and focus of the information.
-Properties: Name.
-Relationships: Includes (Articles).
+- Rationale: Identifies the central theme or subject matter of the content. Crucial for understanding the context and focus of the information.
+- Properties: Name.
+- Relationships: Includes (Articles).
 
 Tag:
-Rationale: Categorizes content based on its type (e.g., opinion, tweet, analysis). Useful for identifying different content genres and their associated characteristics.
-Properties: Type (e.g., Opinion, Tweet, Analysis).
-Relationships: Categorizes (Articles).
+- Rationale: Categorizes content based on its type (e.g., opinion, tweet, analysis). Useful for identifying different content genres and their associated characteristics.
+- Properties: Type (e.g., Opinion, Tweet, Analysis).
+- Relationships: Categorizes (Articles).
 
 Named Entity:
-Rationale: Entities such as people, organizations, or location play a vital role in content. Understanding their mentions provides insights into contextual relevance.
-Properties: Name, Type (Location, Organization, Person).
-Relationships: Mentioned in (Articles).
+- Rationale: Entities such as people, organizations, or location play a vital role in content. Understanding their mentions provides insights into contextual relevance.
+- Properties: Name, Type (Location, Organization, Person).
+- Relationships: Mentioned in (Articles).
 
 Language:
-Properties: Name.
-Relationships: Written in (Articles).
+- Properties: Name.
+- Relationships: Written in (Articles).
 
 Country:
-Rationale: Identifying the country of publication provides contextual information. Different countries may have distinct perspectives, influencing content bias.
-Properties: Name.
-Relationships: Published in (Articles).
+- Rationale: Identifying the country of publication provides contextual information. Different countries may have distinct perspectives, influencing content bias.
+- Properties: Name.
+- Relationships: Published in (Articles).
 
 Content Quality Score:
-Rationale: Aggregate score reflecting clickbait, bias, and objectivity. Provides a quantitative measure of content quality and potential biases.
-Properties: Clickbait Score, Bias Score, Objectivity Score.
-Relationships: Analyzes (Articles).
+- Rationale: Aggregate score reflecting clickbait, bias, and objectivity. Provides a quantitative measure of content quality and potential biases.
+- Properties: Clickbait Score, Bias Score, Objectivity Score.
+- Relationships: Analyzes (Articles).
 
 
 <img width="452" alt="image" src="https://github.com/TrustLevel/Knowledge-Graph-for-Source-and-Content-Reliability/assets/80850851/77867a9b-660d-451b-b1c1-5543ca2bd679">
