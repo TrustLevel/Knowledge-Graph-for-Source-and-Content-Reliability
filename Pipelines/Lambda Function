@@ -1,0 +1,161 @@
+import json
+import boto3
+import requests
+from neo4j import GraphDatabase
+
+# Neo4j credentials. User and Password is hidden. 
+NEO4J_URI = "your_neo4j_uri"
+NEO4J_USER = "your_neo4j_user"
+NEO4J_PASSWORD = "your_neo4j_password"
+
+# Text analysis API endpoints. Actual endpoints will be updated once APIs are integrated.
+CLICKBAIT_DETECTION_API = "your_clickbait_detection_api"
+BIAS_DETECTION_API = "your_bias_detection_api"
+OBJECTIVITY_ANALYSIS_API = "your_objectivity_analysis_api"
+IPTC_CLASSIFIER_API = "your_iptc_classifier_api"
+NER_CLASSIFIER_API = "your_ner_classifier_api"
+
+def lambda_handler(event, context):
+    s3 = boto3.client('s3')
+
+    for record in event['Records']:
+        bucket = record['s3']['bucket']['name']
+        key = record['s3']['object']['key']
+
+        # Fetch data from S3
+        response = s3.get_object(Bucket=bucket, Key=key)
+        data = response['Body'].read().decode('utf-8')
+
+        # Process data
+        processed_data = process_text(data)
+
+        # Update Neo4j
+        update_neo4j(processed_data)
+
+def process_text(data):
+    # Extract relevant columns from CSV
+    csv_data = [row.split('\t') for row in data.split('\n')]
+    headers = csv_data[0]
+    rows = csv_data[1:]
+
+    title_index = headers.index('Title')
+    text_index = headers.index('Text')
+    language_index = headers.index('Language')
+    country_index = headers.index('Country')
+
+    # Process title and text using text analysis APIs
+    processed_title = analyze_text(rows[0][title_index], 'Title')
+    processed_text = analyze_text(rows[0][text_index], 'Text')
+
+    # Extract language and country information
+    language = rows[0][language_index]
+    country = rows[0][country_index]
+
+    # Combine processed results
+    processed_data = {
+        'processed_title': processed_title,
+        'processed_text': processed_text,
+        'language': language,
+        'country': country
+        # Placeholder for more types
+    }
+
+    return processed_data
+
+def analyze_text(text, text_type):
+    # Call relevant text analysis APIs based on text_type
+    if text_type == 'Title':
+        clickbait_score = call_clickbait_detection_api(text)
+    elif text_type == 'Text':
+        bias_score = call_bias_detection_api(text)
+        objectivity_score = call_objectivity_analysis_api(text)
+        iptc_category = call_iptc_classifier_api(text)
+        ner_entities = call_ner_classifier_api(text)
+    else:
+        # Placeholder for more types
+        pass
+
+    # Return processed results
+    processed_result = {
+        'clickbait_score': clickbait_score,
+        'bias_score': bias_score,
+        'objectivity_score': objectivity_score,
+        'iptc_category': iptc_category,
+        'ner_entities': ner_entities
+        # Placeholder for more types
+    }
+
+    return processed_result
+
+def call_clickbait_detection_api(text):
+    # Call Clickbait Detection API and return the score
+    response = requests.post(CLICKBAIT_DETECTION_API, data={'text': text})
+    return response.json()['clickbait_score']
+
+def call_bias_detection_api(text):
+    # Call Bias Detection API and return the bias score
+    response = requests.post(BIAS_DETECTION_API, data={'text': text})
+    return response.json()['bias_score']
+
+def call_objectivity_analysis_api(text):
+    # Call Objectivity Analysis API and return the objectivity score
+    response = requests.post(OBJECTIVITY_ANALYSIS_API, data={'text': text})
+    return response.json()['objectivity_score']
+
+def call_iptc_classifier_api(text):
+    # Call IPTC Classifier API and return the category
+    response = requests.post(IPTC_CLASSIFIER_API, data={'text': text})
+    return response.json()['category']
+
+def call_ner_classifier_api(text):
+    # Call NER Classifier API and return the named entities
+    response = requests.post(NER_CLASSIFIER_API, data={'text': text})
+    return response.json()['entities']
+
+def update_neo4j(processed_data):
+    # Connect to Neo4j database
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+    
+    # Extract processed data
+    processed_title = processed_data.get('processed_title', '')
+    processed_text = processed_data.get('processed_text', '')
+    language = processed_data.get('language', '')
+    country = processed_data.get('country', '')
+    clickbait_score = processed_data.get('clickbait_score', 0)
+    bias_score = processed_data.get('bias_score', 0)
+    objectivity_score = processed_data.get('objectivity_score', 0)
+    iptc_category = processed_data.get('iptc_category', '')
+    ner_entities = processed_data.get('ner_entities', [])
+
+    # Execute Cypher queries to update Neo4j
+    with driver.session() as session:
+        session.run("""
+            MERGE (a:Article {title: $title, text: $text, language: $language, country: $country})
+            SET a.clickbait_score = $clickbait_score,
+                a.bias_score = $bias_score,
+                a.objectivity_score = $objectivity_score
+        """, title=processed_title, text=processed_text, language=language, country=country,
+           clickbait_score=clickbait_score, bias_score=bias_score, objectivity_score=objectivity_score)
+
+        # Update related nodes and relationships
+        session.run("""
+            MERGE (l:Language {name: $language})
+            MERGE (c:Country {name: $country})
+            MERGE (l)-[:Written_in]->(a)
+            MERGE (c)-[:Published_in]->(a)
+        """, language=language, country=country)
+
+        # Update relationships with classifiers
+        session.run("""
+            MERGE (a)-[:Belongs_to]->(t:Topic {name: $iptc_category})
+        """, iptc_category=iptc_category)
+
+        # Update relationships with named entities
+        for entity in ner_entities:
+            session.run("""
+                MERGE (e:NamedEntity {name: $entity, type: $entity_type})
+                MERGE (a)-[:Mentions]->(e)
+            """, entity=entity['name'], entity_type=entity['type'])
+
+    # Close the Neo4j driver
+    driver.close()

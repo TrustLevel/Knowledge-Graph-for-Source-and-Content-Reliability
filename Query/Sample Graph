@@ -1,0 +1,47 @@
+LOAD CSV WITH HEADERS FROM 'file:///SampleKG_7.1.csv' AS line FIELDTERMINATOR ';'
+WITH line WHERE line.Article_ID IS NOT NULL AND line.Title IS NOT NULL
+MERGE (a:Article {
+    id: line. Article_ID,
+    title: line.Title         
+})
+ON CREATE SET a.CQS= line.CQS, 
+a.date= line.Date,
+a.url= line.Url   
+
+WITH line, a, line as filter where line.Publisher is not null
+MERGE (publisher:Publisher {name: filter.Publisher})
+MERGE (a)-[:PUBLISHED_BY]->(publisher)
+
+WITH line, a, line as filter where line.Tag is not null
+MERGE (tag:Tag {name: filter.Tag})
+MERGE (a)-[:TAGGED_WITH]->(tag)
+
+WITH line, a, line as filter where line.Category is not null
+WITH line, a, split(filter.Category, ',') as categories
+UNWIND categories as cat
+MERGE (category:Category {name: cat})
+MERGE (a)-[:BELONGS_TO]->(category)
+
+WITH line, a, line as filter where line.Language is not null
+MERGE (language:Language {name: filter.Language})
+MERGE (a)-[:IN_LANGUAGE]->(language)
+
+
+WITH line, a, line as filter where line.Country is not null
+WITH line, a, split(filter.Country, ',') as countries
+UNWIND countries as count
+MERGE (country:Country {name: count})
+MERGE (a)-[:PUBLISHED_IN]->(country)
+
+WITH line, a, line as filter where line.Author is not null
+WITH line, a, split(filter.Author, ',') as authors
+UNWIND authors as auth
+MERGE (author:Author {name: auth})
+MERGE (a)-[:WRITTEN_BY]->(author)
+
+
+WITH line, a, line as filter where line.Entities_Country is not null
+WITH line, a, split(filter.Entities_Country, ',') as categories
+UNWIND categories as ecat
+MERGE (ec:Entities_Country {name: ecat})
+MERGE (a)-[:MENTIONS ]->(ec)

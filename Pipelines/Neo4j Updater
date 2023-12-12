@@ -1,0 +1,65 @@
+from neo4j import GraphDatabase
+import os
+
+# Neo4j credentials. User and Password is hidden. 
+NEO4J_URI = "your_neo4j_uri"
+NEO4J_USER = "your_neo4j_user"
+NEO4J_PASSWORD = "your_neo4j_password"
+
+def lambda_handler(event, context):
+    # Connect to Neo4j database
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+
+    try:
+        for record in event['Records']:
+            # Process data from the event
+            processed_data = record.get('processed_data', {})
+
+            # Update Neo4j
+            update_neo4j(driver, processed_data)
+
+    finally:
+        # Close the Neo4j driver
+        driver.close()
+
+def update_neo4j(driver, processed_data):
+    with driver.session() as session:
+        # Extract processed data
+        processed_title = processed_data.get('processed_title', '')
+        processed_text = processed_data.get('processed_text', '')
+        language = processed_data.get('language', '')
+        country = processed_data.get('country', '')
+        clickbait_score = processed_data.get('clickbait_score', 0)
+        bias_score = processed_data.get('bias_score', 0)
+        objectivity_score = processed_data.get('objectivity_score', 0)
+        iptc_category = processed_data.get('iptc_category', '')
+        ner_entities = processed_data.get('ner_entities', [])
+
+        # Execute Cypher queries to update Neo4j
+        session.run("""
+            MERGE (a:Article {title: $title, text: $text, language: $language, country: $country})
+            SET a.clickbait_score = $clickbait_score,
+                a.bias_score = $bias_score,
+                a.objectivity_score = $objectivity_score
+        """, title=processed_title, text=processed_text, language=language, country=country,
+           clickbait_score=clickbait_score, bias_score=bias_score, objectivity_score=objectivity_score)
+
+        # Update related nodes and relationships
+        session.run("""
+            MERGE (l:Language {name: $language})
+            MERGE (c:Country {name: $country})
+            MERGE (l)-[:Written_in]->(a)
+            MERGE (c)-[:Published_in]->(a)
+        """, language=language, country=country)
+
+        # CUpdate relationships with classifiers
+        session.run("""
+            MERGE (a)-[:Belongs_to]->(t:Topic {name: $iptc_category})
+        """, iptc_category=iptc_category)
+
+        # Update relationships with named entities
+        for entity in ner_entities:
+            session.run("""
+                MERGE (e:NamedEntity {name: $entity, type: $entity_type})
+                MERGE (a)-[:Mentions]->(e)
+            """, entity=entity['name'], entity_type=entity['type'])

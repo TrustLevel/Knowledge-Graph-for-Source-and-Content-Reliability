@@ -1,0 +1,53 @@
+from neo4j import GraphDatabase
+import boto3
+
+# Neo4j credentials. User and Password is hidden. 
+NEO4J_URI = "your_neo4j_uri"
+NEO4J_USER = "your_neo4j_user"
+NEO4J_PASSWORD = "your_neo4j_password"
+
+def lambda_handler(event, context):
+    # Connect to Neo4j database
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+
+    try:
+        # Fetch data from Neo4j
+        knowledge_graph_data = fetch_knowledge_graph_data(driver)
+
+        # Apply additional logic or transformations if needed
+        transformed_data = apply_transformations(knowledge_graph_data)
+
+        # Update Neo4j with the transformed data
+        update_neo4j(driver, transformed_data)
+
+    finally:
+        # Close the Neo4j driver
+        driver.close()
+
+def fetch_knowledge_graph_data(driver):
+    with driver.session() as session:
+        # Execute Cypher query to fetch data from Neo4j
+        result = session.run("""
+            MATCH (a:Article)-[:Belongs_to]->(t:Topic)
+            RETURN a.title AS title, a.text AS text, t.name AS topic
+        """)
+        # Process and return the fetched data
+        knowledge_graph_data = [record for record in result]
+
+    return knowledge_graph_data
+
+def apply_transformations(data):
+    # Add a new property to each record
+    for record in data:
+        record['new_property'] = 'example_value'
+
+    return data
+
+def update_neo4j(driver, transformed_data):
+    with driver.session() as session:
+        # Execute Cypher queries to update Neo4j with the transformed data
+        for record in transformed_data:
+            session.run("""
+                MERGE (a:Article {title: $title, text: $text})
+                SET a.new_property = $new_property
+            """, title=record['title'], text=record['text'], new_property=record['new_property'])
